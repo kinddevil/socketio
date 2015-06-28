@@ -5,6 +5,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var http = require('http')
+var io = require('socket.io');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
@@ -67,6 +68,28 @@ app.use(function(err, req, res, next) {
 
 module.exports = app;
 
-http.createServer(app).listen(app.get('port'), function() {
+var httpServer = http.createServer(app).listen(app.get('port'), function() {
     console.log("Express server listening on port " + app.get('port'));
 });
+
+var wsocket = io(httpServer)
+
+wsocket.on('connection', function (client) { 
+    client.emit('this', { will: 'be received by everyone'});
+    client.on('private message', function (from, msg) {
+      console.log(arguments)
+      console.log('I received a private message by ', from, ' saying ', msg);
+    });
+
+    client.on('disconnect', function () {
+      console.log("user disconnected", arguments)
+      client.emit('user disconnected');
+    });
+
+    client.emit('news', { hello: 'world' });
+    // client.volatile.emit('news', { hello: 'world' });
+    client.broadcast.emit('broadcast');
+    client.on('my other event', function (data) {
+      console.log(data);
+    }); 
+}); 
